@@ -1,0 +1,45 @@
+workflow:
+  rules:
+    - if: '$CI_MERGE_REQUEST_TITLE =~ /Draft:/'    
+
+image: golang:latest
+
+stages:
+  - test
+  - build
+  - deploy
+
+format:
+  stage: test
+  script:
+    - go fmt $(go list ./... | grep -v /vendor/)
+    - go vet $(go list ./... | grep -v /vendor/)
+    - go test -race $(go list ./... | grep -v /vendor/)
+  rules:
+    - if: '$CI_MERGE_REQUEST_TITLE =~ /Draft:/'    
+  except:
+    - master    
+
+compile:
+  stage: build
+  script:
+    - mkdir -p mybinaries
+    - go build -o mybinaries ./...
+  artifacts:
+    paths:
+      - mybinaries
+  rules:
+    - if: '$CI_MERGE_REQUEST_TITLE =~ /Draft:/'      
+  except:
+    - master    
+
+deploy:
+  image: scratch
+  stage: deploy
+  script:
+    - ls mybinaries
+  environment: production
+  rules: 
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+  only:
+    - master     
